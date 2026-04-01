@@ -10,8 +10,10 @@ import java.time.LocalDateTime;
 
 /**
  * Extension of BaseEntity that adds soft-delete capability.
- * The @SQLRestriction annotation automatically filters deleted records from ALL queries.
- * and applies it universally across all major entities.
+ * The {@link SQLRestriction} annotation adds a default filter so that, by default,
+ * Hibernate-generated queries for entities extending this class exclude rows with {@code deleted_at} set.
+ * Note: this does not automatically apply to native SQL queries or other direct database access,
+ * which must explicitly include the {@code deleted_at IS NULL} condition if soft-deleted rows should be excluded.
  * Usage: entity.softDelete() then repository.save(entity)
  */
 @MappedSuperclass
