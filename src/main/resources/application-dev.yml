@@ -1,0 +1,52 @@
+spring:
+  # Database (H2 in-memory)
+  datasource:
+    url: jdbc:h2:mem:ecombend
+    driver-class-name: org.h2.Driver
+    username: sa
+    password:
+  h2:
+    console:
+      enabled: true
+      path: /h2-console
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+    show-sql: true
+    properties:
+        hibernate:
+            format_sql: true
+  # Email
+  mail:
+    host: smtp.gmail.com
+    port: 587
+    username: ${MY_EMAIL}
+    password: ${API_KEY}
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+    from: ${MY_EMAIL}
+
+# JWT
+jwt:
+  secret: ${JWT_SECRET_KEY}
+  expiration-ms: 86400000
+  
+# Cloudinary
+cloudinary:
+  cloud_name: ${API_CLOUDNAME}
+  api_key: ${CLOUDINARY_KEY}
+  api_secret: ${API_SECRET}
+  
+# Storage
+storage:
+  base-path: /tmp/ecombend/uploads
+  base-url: http://localhost:8080/files
+  
+# App
+site:
+  base:
+    url: http://localhost:8080

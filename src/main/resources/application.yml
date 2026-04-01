@@ -1,0 +1,8 @@
+spring:
+  application:
+    name: ecombend
+  profiles:
+    active: dev
+  web:
+    error:
+      include-stacktrace: ALWAYS

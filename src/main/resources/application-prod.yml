@@ -1,0 +1,39 @@
+spring:
+# Database (PostgreSQL)
+  datasource:
+    url: ${DB_URL}
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    show-sql: false
+  h2:
+    console:
+      enabled: false
+# Email
+  mail:
+    host: smtp.gmail.com
+    port: 587
+    username: ${MY_EMAIL}
+    password: ${API_KEY}
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+    from: ${MY_EMAIL}
+
+jwt:
+  secret: ${JWT_SECRET_KEY}
+  expiration-ms: 86400000
+
+cloudinary:
+  cloud_name: ${API_CLOUDNAME}
+  api_key: ${CLOUDINARY_KEY}
+  api_secret: ${API_SECRET}
+
+site:
+  base:
+    url: ${APP_BASE_URL}
