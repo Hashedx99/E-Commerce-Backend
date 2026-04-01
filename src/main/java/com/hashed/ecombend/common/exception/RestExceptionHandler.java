@@ -40,9 +40,10 @@ public class RestExceptionHandler extends ResponseEntityExceptionHandler {
                 errors.put(error.getField(), error.getDefaultMessage())
         );
 
+        ApiResponse<Map<String, String>> response = ApiResponse.error("Validation failed", errors);
         return ResponseEntity
                 .status(HttpStatus.BAD_REQUEST)
-                .body(ApiResponse.error("Validation failed: " + errors));
+                .body(response);
     }
 
     // Domain exceptions
