@@ -62,4 +62,17 @@ public class ApiResponse<T> {
     public static <T> ApiResponse<T> error(String message) {
         return new ApiResponse<>(false, message, null);
     }
+
+    /**
+     * Creates an error response with a data payload.
+     * Use this to return structured error details (e.g., validation field errors).
+     *
+     * @param message error message
+     * @param data    error details payload
+     * @param <T>     Type of the data
+     * @return error response with data
+     */
+    public static <T> ApiResponse<T> error(String message, T data) {
+        return new ApiResponse<>(false, message, data);
+    }
 }
