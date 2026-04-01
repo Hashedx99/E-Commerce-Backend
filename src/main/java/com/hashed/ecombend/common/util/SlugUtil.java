@@ -1,5 +1,7 @@
 package com.hashed.ecombend.common.util;
 
+import java.util.Locale;
+
 /**
  * Utility for generating URL-safe slugs from display names.
  * Example: "Apple Watch Series 9" → "apple-watch-series-9"
@@ -21,7 +23,7 @@ public final class SlugUtil {
             return "";
         }
         return input
-                .toLowerCase()
+                .toLowerCase(Locale.ROOT)
                 .replaceAll("[^a-z0-9\\s-]", "")
                 .replaceAll("\\s+", "-")
                 .replaceAll("-+", "-")
