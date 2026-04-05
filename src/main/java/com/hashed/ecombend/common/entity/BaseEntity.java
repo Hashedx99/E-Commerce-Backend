@@ -40,3 +40,8 @@ public abstract class BaseEntity {
     /**
      * Runs automatically before every UPDATE.
      */
+    @PreUpdate
+    protected void onUpdate() {
+        this.updatedAt = LocalDateTime.now();
+    }
+}
