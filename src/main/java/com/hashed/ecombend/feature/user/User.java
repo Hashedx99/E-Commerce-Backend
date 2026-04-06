@@ -53,3 +53,42 @@ public class User extends SoftDeleteEntity {
     private UserStatus status = UserStatus.ACTIVE;
 
     @Column(name = "profile_picture_url")
+    private String profilePictureUrl;
+
+    @Column(name = "email_verified", nullable = false)
+    private boolean emailVerified = false;
+
+    @JsonIgnore
+    @Column(name = "verification_token")
+    private String verificationToken;
+
+    @JsonIgnore
+    @Column(name = "verification_token_expires_at")
+    private LocalDateTime verificationTokenExpiresAt;
+
+    @JsonIgnore
+    @Column(name = "reset_token")
+    private String resetToken;
+
+    @JsonIgnore
+    @Column(name = "reset_token_expires_at")
+    private LocalDateTime resetTokenExpiresAt;
+
+    /**
+     * Optimistic lock version managed by JPA.
+     * Protects against concurrent updates to the same user record.
+     */
+    @Version
+    @Column(name = "version")
+    private Integer version;
+
+    /**
+     * @return true if this user is allowed to authenticate.
+     * Must be email verified, active status, and not soft deleted.
+     */
+    public boolean canLogin() {
+        return this.emailVerified
+                && this.status == UserStatus.ACTIVE
+                && !this.isDeleted();
+    }
+}
