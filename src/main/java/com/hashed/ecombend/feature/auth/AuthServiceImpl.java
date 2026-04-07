@@ -108,3 +108,68 @@ public class AuthServiceImpl implements AuthService {
 
         user.setEmailVerified(true);
         user.setVerificationToken(null);
+        user.setVerificationTokenExpiresAt(null);
+        userRepository.save(user);
+        log.info("Email verified for user: {}", user.getEmail());
+    }
+
+    /**
+     * Sends a reset link if the email exists. Always returns 200 regardless.
+     */
+    @Override
+    public void forgotPassword(String email) {
+        userRepository.findByEmail(email).ifPresent(user -> {
+            String token = UUID.randomUUID().toString();
+            user.setResetToken(token);
+            user.setResetTokenExpiresAt(LocalDateTime.now().plusHours(1));
+            userRepository.save(user);
+            sendPasswordResetEmail(user, token);
+            log.info("Password reset email sent to: {}", email);
+        });
+    }
+
+    /**
+     * Completes a password reset. Validates token expiry before updating.
+     *
+     * @throws BusinessException if token is missing, invalid, or expired
+     */
+    @Override
+    public void resetPassword(ResetPasswordRequest request) {
+        User user = userRepository.findByResetToken(request.getToken())
+                .orElseThrow(() -> new BusinessException(
+                        "Invalid or expired reset token. Please request a new one."));
+
+        if (user.getResetTokenExpiresAt().isBefore(LocalDateTime.now())) {
+            throw new BusinessException(
+                    "Reset link has expired. Please request a new password reset.");
+        }
+
+        user.setPasswordHash(passwordEncoder.encode(request.getNewPassword()));
+        user.setResetToken(null);
+        user.setResetTokenExpiresAt(null);
+        userRepository.save(user);
+        log.info("Password reset for user: {}", user.getEmail());
+    }
+
+    /**
+     * Changes password for the currently authenticated user.
+     * Old password must match before allowing the update.
+     *
+     * @throws BusinessException if oldPassword doesn't match the stored hash
+     */
+    @Override
+    public void changePassword(ChangePasswordRequest request) {
+        User user = SecurityUtil.getCurrentUser();
+
+        if (!passwordEncoder.matches(request.getOldPassword(), user.getPasswordHash())) {
+            throw new BusinessException("Current password is incorrect");
+        }
+
+        user.setPasswordHash(passwordEncoder.encode(request.getNewPassword()));
+        userRepository.save(user);
+        log.info("Password changed for user: {}", user.getEmail());
+    }
+
+
+    /**
+     * Sends the email verification email using the Thymeleaf template.
