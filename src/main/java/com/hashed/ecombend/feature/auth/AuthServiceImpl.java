@@ -173,3 +173,27 @@ public class AuthServiceImpl implements AuthService {
 
     /**
      * Sends the email verification email using the Thymeleaf template.
+     *
+     * @param user  The newly registered user
+     * @param token The UUID verification token
+     */
+    private void sendVerificationEmail(User user, String token) {
+        AccountVerificationEmailContext ctx = new AccountVerificationEmailContext();
+        ctx.init(user);
+        ctx.buildVerificationUrl(baseUrl, token);
+        emailService.sendMail(ctx);
+    }
+
+    /**
+     * Sends the password reset email using the Thymeleaf template.
+     *
+     * @param user  The user requesting the reset
+     * @param token The UUID reset token
+     */
+    private void sendPasswordResetEmail(User user, String token) {
+        AccountPasswordResetEmailContext ctx = new AccountPasswordResetEmailContext();
+        ctx.init(user);
+        ctx.buildResetUrl(baseUrl, token);
+        emailService.sendMail(ctx);
+    }
+}
