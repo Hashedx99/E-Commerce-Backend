@@ -83,3 +83,28 @@ public class AuthServiceImpl implements AuthService {
                         request.getEmail(), request.getPassword())
         );
 
+        SecurityContextHolder.getContext().setAuthentication(auth);
+        MyUserDetails principal = (MyUserDetails) auth.getPrincipal();
+        String jwt = jwtUtils.generateJwtToken(principal);
+
+        log.info("User logged in: {}", principal.getUsername());
+        return new LoginResponse(jwt, principal.getUser().getRole().name());
+    }
+
+    /**
+     * Activates an account via the token link. Validates expiry before activating
+     *
+     * @throws BusinessException if token is invalid or expired
+     */
+    @Override
+    public void verifyEmail(String token) {
+        User user = userRepository.findByVerificationToken(token)
+                .orElseThrow(() -> new BusinessException("Invalid verification token"));
+
+        if (user.getVerificationTokenExpiresAt().isBefore(LocalDateTime.now())) {
+            throw new BusinessException(
+                    "Verification link has expired. Please register again or request a new link.");
+        }
+
+        user.setEmailVerified(true);
+        user.setVerificationToken(null);
