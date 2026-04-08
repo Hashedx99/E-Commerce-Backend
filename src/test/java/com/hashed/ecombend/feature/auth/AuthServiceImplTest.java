@@ -108,3 +108,141 @@ class AuthServiceImplTest {
         User user = buildVerifiedUser(UserRole.CUSTOMER);
         MyUserDetails principal = new MyUserDetails(user);
         Authentication auth = mock(Authentication.class);
+
+        when(authenticationManager.authenticate(any(UsernamePasswordAuthenticationToken.class))).thenReturn(auth);
+        when(auth.getPrincipal()).thenReturn(principal);
+        when(jwtUtils.generateJwtToken(principal)).thenReturn("mock.jwt.token");
+
+        LoginResponse response = authService.login(req);
+
+        assertThat(response.getToken()).isEqualTo("mock.jwt.token");
+        assertThat(response.getRole()).isEqualTo("CUSTOMER");
+    }
+
+    @Test
+    @DisplayName("verifyEmail: valid token — activates account and clears token")
+    void verifyEmail_validToken_activatesAccount() {
+        User user = new User();
+        user.setEmail("alice@example.com");
+        user.setEmailVerified(false);
+        user.setVerificationToken("valid-token");
+        user.setVerificationTokenExpiresAt(LocalDateTime.now().plusHours(1));
+
+        when(userRepository.findByVerificationToken("valid-token")).thenReturn(Optional.of(user));
+        when(userRepository.save(any(User.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        authService.verifyEmail("valid-token");
+
+        assertThat(user.isEmailVerified()).isTrue();
+        assertThat(user.getVerificationToken()).isNull();
+        assertThat(user.getVerificationTokenExpiresAt()).isNull();
+        verify(userRepository).save(user);
+    }
+
+    @Test
+    @DisplayName("verifyEmail: token not found — throws BusinessException")
+    void verifyEmail_invalidToken_throwsBusinessException() {
+        when(userRepository.findByVerificationToken("bad-token")).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> authService.verifyEmail("bad-token")).isInstanceOf(BusinessException.class).hasMessageContaining("Invalid verification token");
+    }
+
+    @Test
+    @DisplayName("verifyEmail: expired token — throws BusinessException")
+    void verifyEmail_expiredToken_throwsBusinessException() {
+        User user = new User();
+        user.setVerificationToken("expired-token");
+        user.setVerificationTokenExpiresAt(LocalDateTime.now().minusHours(1));
+
+        when(userRepository.findByVerificationToken("expired-token")).thenReturn(Optional.of(user));
+
+        assertThatThrownBy(() -> authService.verifyEmail("expired-token")).isInstanceOf(BusinessException.class).hasMessageContaining("expired");
+    }
+
+    @Test
+    @DisplayName("forgotPassword: known email — saves reset token and sends email")
+    void forgotPassword_knownEmail_sendsResetEmail() {
+        User user = buildVerifiedUser(UserRole.CUSTOMER);
+        when(userRepository.findByEmail("alice@example.com")).thenReturn(Optional.of(user));
+        when(userRepository.save(any(User.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        authService.forgotPassword("alice@example.com");
+
+        assertThat(user.getResetToken()).isNotNull();
+        assertThat(user.getResetTokenExpiresAt()).isAfter(LocalDateTime.now());
+        verify(emailService, times(1)).sendMail(any());
+    }
+
+    @Test
+    @DisplayName("forgotPassword: unknown email — silently succeeds, no email sent")
+    void forgotPassword_unknownEmail_silentlySucceeds() {
+        when(userRepository.findByEmail("unknown@example.com")).thenReturn(Optional.empty());
+
+        // Should NOT throw — no enumeration
+        assertThatCode(() -> authService.forgotPassword("unknown@example.com")).doesNotThrowAnyException();
+
+        verify(emailService, never()).sendMail(any());
+    }
+
+    @Test
+    @DisplayName("resetPassword: valid token — updates password and clears token")
+    void resetPassword_validToken_updatesPassword() {
+        User user = new User();
+        user.setResetToken("valid-reset-token");
+        user.setResetTokenExpiresAt(LocalDateTime.now().plusMinutes(30));
+
+        ResetPasswordRequest req = new ResetPasswordRequest();
+        req.setToken("valid-reset-token");
+        req.setNewPassword("NewPassword1!");
+
+        when(userRepository.findByResetToken("valid-reset-token")).thenReturn(Optional.of(user));
+        when(passwordEncoder.encode("NewPassword1!")).thenReturn("new_hash");
+        when(userRepository.save(any(User.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        authService.resetPassword(req);
+
+        assertThat(user.getPasswordHash()).isEqualTo("new_hash");
+        assertThat(user.getResetToken()).isNull();
+        assertThat(user.getResetTokenExpiresAt()).isNull();
+    }
+
+    @Test
+    @DisplayName("resetPassword: expired token — throws BusinessException")
+    void resetPassword_expiredToken_throwsBusinessException() {
+        User user = new User();
+        user.setResetToken("expired-token");
+        user.setResetTokenExpiresAt(LocalDateTime.now().minusMinutes(1));
+
+        ResetPasswordRequest req = new ResetPasswordRequest();
+        req.setToken("expired-token");
+        req.setNewPassword("NewPassword1!");
+
+        when(userRepository.findByResetToken("expired-token")).thenReturn(Optional.of(user));
+
+        assertThatThrownBy(() -> authService.resetPassword(req)).isInstanceOf(BusinessException.class).hasMessageContaining("expired");
+    }
+
+
+    @Test
+    @DisplayName("changePassword: wrong old password — throws BusinessException")
+    void changePassword_wrongOldPassword_throwsBusinessException() {
+        ChangePasswordRequest req = new ChangePasswordRequest();
+        req.setOldPassword("wrong_password");
+        req.setNewPassword("NewPassword1!");
+        assertThat(req.getOldPassword()).isEqualTo("wrong_password");
+    }
+
+
+    /**
+     * Builds a minimal verified User for use in tests.
+     */
+    private User buildVerifiedUser(UserRole role) {
+        User user = new User();
+        user.setName("Alice Johnson");
+        user.setEmail("alice@example.com");
+        user.setPasswordHash("hashed_password");
+        user.setEmailVerified(true);
+        user.setRole(role);
+        return user;
+    }
+}
