@@ -83,3 +83,38 @@ public class UserServiceImpl implements UserService {
             storageService.delete(user.getProfilePictureUrl());
         }
 
+        String url = storageService.store(file, "profiles/" + user.getId());
+        user.setProfilePictureUrl(url);
+        User saved = userRepository.save(user);
+        log.info("Profile picture updated for user: {}", saved.getEmail());
+        return UserProfileResponse.from(saved);
+    }
+
+    /**
+     * Returns all non-deleted users. Admin only enforced by @PreAuthorize in controller.
+     */
+    @Override
+    @Transactional(readOnly = true)
+    public List<UserProfileResponse> getAllUsers() {
+        return userRepository.findAll()
+                .stream()
+                .map(UserProfileResponse::from)
+                .collect(Collectors.toList());
+    }
+
+    /**
+     * Soft-deletes a user by setting deleted_at.
+     * The @SQLRestriction on User means this user becomes invisible to all queries.
+     * They will not be able to log in MyUserDetails.isEnabled() returns false.
+     * Admin only enforced by @PreAuthorize in controller.
+     *
+     * @throws ResourceNotFoundException if user not found
+     * @throws BusinessException         if admin tries to delete themselves
+     */
+    @Override
+    public void softDeleteUser(UUID userId) {
+        User currentAdmin = SecurityUtil.getCurrentUser();
+        if (currentAdmin.getId().equals(userId)) {
+            throw new BusinessException("You cannot delete your own account");
+        }
+
