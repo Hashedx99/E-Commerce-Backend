@@ -118,3 +118,92 @@ public class UserServiceImpl implements UserService {
             throw new BusinessException("You cannot delete your own account");
         }
 
+        User target = userRepository.findById(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("User", "id", userId));
+
+        target.softDelete();
+        userRepository.save(target);
+        log.info("User soft-deleted: {} by admin: {}", target.getEmail(), currentAdmin.getEmail());
+    }
+
+    /**
+     * Returns all addresses for the current user, default address first.
+     */
+    @Override
+    @Transactional(readOnly = true)
+    public List<Address> getMyAddresses() {
+        return addressRepository.findByUserIdOrderByDefaultAddressDesc(
+                SecurityUtil.getCurrentUser().getId()
+        );
+    }
+
+    /**
+     * Creates a new address for the current user.
+     * If isDefault is true, all existing addresses are first set to non-default.
+     */
+    @Override
+    public Address createAddress(AddressRequest request) {
+        User user = SecurityUtil.getCurrentUser();
+
+        if (request.isDefaultAddress()) {
+            addressRepository.clearDefaultForUser(user.getId());
+        }
+
+        Address address = buildAddress(request, user);
+        Address saved = addressRepository.save(address);
+        log.info("Address created for user: {}", user.getEmail());
+        return saved;
+    }
+
+    /**
+     * Updates an existing address. Verifies ownership before updating.
+     *
+     * @throws ResourceNotFoundException if address not found or belongs to another user
+     */
+    @Override
+    public Address updateAddress(UUID addressId, AddressRequest request) {
+        User user = SecurityUtil.getCurrentUser();
+        Address address = addressRepository.findByIdAndUserId(addressId, user.getId())
+                .orElseThrow(() -> new ResourceNotFoundException("Address", "id", addressId));
+
+        if (request.isDefaultAddress()) {
+            addressRepository.clearDefaultForUser(user.getId());
+        }
+
+        applyAddressUpdates(address, request);
+        return addressRepository.save(address);
+    }
+
+    /**
+     * Hard deletes an address. Verifies ownership before deleting.
+     *
+     * @throws ResourceNotFoundException if address not found or belongs to another user
+     */
+    @Override
+    public void deleteAddress(UUID addressId) {
+        User user = SecurityUtil.getCurrentUser();
+        Address address = addressRepository.findByIdAndUserId(addressId, user.getId())
+                .orElseThrow(() -> new ResourceNotFoundException("Address", "id", addressId));
+        addressRepository.delete(address);
+    }
+
+    private Address buildAddress(AddressRequest req, User user) {
+        Address a = new Address();
+        a.setUser(user);
+        applyAddressUpdates(a, req);
+        return a;
+    }
+
+    private void applyAddressUpdates(Address address, AddressRequest req) {
+        address.setLabel(req.getLabel());
+        address.setFullName(req.getFullName());
+        address.setPhone(req.getPhone());
+        address.setLine1(req.getLine1());
+        address.setLine2(req.getLine2());
+        address.setCity(req.getCity());
+        address.setState(req.getState());
+        address.setPostalCode(req.getPostalCode());
+        address.setCountry(req.getCountry());
+        address.setDefaultAddress(req.isDefaultAddress());
+    }
+}
