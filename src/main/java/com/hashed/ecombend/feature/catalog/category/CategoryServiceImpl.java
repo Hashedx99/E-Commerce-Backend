@@ -78,3 +78,83 @@ public class CategoryServiceImpl implements CategoryService {
      */
     @Override
     public Category update(UUID id, CategoryRequest request) {
+        Category category = getById(id);
+
+        // Regenerate slug only if name actually changed
+        if (StringUtils.hasText(request.getName())
+                && !request.getName().equalsIgnoreCase(category.getName())) {
+            category.setName(request.getName());
+            category.setSlug(generateUniqueSlug(request.getName(), id));
+        }
+
+        if (request.getDescription() != null) category.setDescription(request.getDescription());
+        if (request.getImageUrl() != null) category.setImageUrl(request.getImageUrl());
+        if (request.getSortOrder() != null) category.setSortOrder(request.getSortOrder());
+
+        if (request.getParentId() != null) {
+            if (request.getParentId().equals(id)) {
+                throw new BusinessException("A category cannot be its own parent");
+            }
+            Category parent = categoryRepository.findById(request.getParentId())
+                    .orElseThrow(() -> new ResourceNotFoundException(
+                            "Parent category", "id", request.getParentId()));
+            category.setParent(parent);
+        }
+
+        Category saved = categoryRepository.save(category);
+        log.info("Category updated: {}", saved.getName());
+        return saved;
+    }
+
+    /**
+     * Soft deletes a category. Guards against deleting a category that still has
+     * active products or child categories referencing it.
+     *
+     * @throws BusinessException         if active products or sub-categories exist
+     * @throws ResourceNotFoundException if category not found
+     */
+    @Override
+    public void delete(UUID id) {
+        Category category = getById(id);
+
+        if (productRepository.existsByCategoryIdAndDeletedAtIsNull(id)) {
+            throw new BusinessException(
+                    "Cannot delete category '" + category.getName()
+                            + "' — it still has active products. Remove or reassign them first.");
+        }
+
+        if (categoryRepository.existsByParentId(id)) {
+            throw new BusinessException(
+                    "Cannot delete category '" + category.getName()
+                            + "' — it has sub-categories. Delete or reassign them first.");
+        }
+
+        category.softDelete();
+        categoryRepository.save(category);
+        log.info("Category soft-deleted: {}", category.getName());
+    }
+
+    /**
+     * Generates a slug from the name, appending a numeric suffix if the base
+     * slug is already taken by a different category.
+     *
+     * @param name      The category name
+     * @param excludeId The id of the current category to exclude from uniqueness check
+     *                  (null for new categories)
+     * @return A unique slug string
+     */
+    private String generateUniqueSlug(String name, UUID excludeId) {
+        String base = SlugUtil.generate(name);
+        String candidate = base;
+        int suffix = 2;
+
+        while (true) {
+            final String slug = candidate;
+            boolean taken = categoryRepository.findBySlug(slug)
+                    .filter(c -> !c.getId().equals(excludeId))
+                    .isPresent();
+            if (!taken) return slug;
+            candidate = SlugUtil.withSuffix(base, suffix++);
+        }
+    }
+}
