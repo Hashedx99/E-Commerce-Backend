@@ -78,3 +78,61 @@ public class Product extends SoftDeleteEntity {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "category_id", nullable = false)
     private Category category;
+
+    @OneToMany(mappedBy = "product", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<ProductImage> images = new ArrayList<>();
+
+    /**
+     * Optimistic lock version.
+     * JPA checks this before every UPDATE and increments it on success.
+     */
+    @Version
+    @Column(name = "version")
+    private Integer version;
+
+
+    /**
+     * Decrements stock by the requested quantity.
+     * The caller (OrderService) must verify stock >= quantity BEFORE calling this.
+     *
+     * @param quantity Units to remove from stock
+     */
+    public void decrementStock(int quantity) {
+        this.stock -= quantity;
+    }
+
+    /**
+     * Increments stock used for cancellations, returns, and restocks.
+     *
+     * @param quantity Units to add to stock
+     */
+    public void incrementStock(int quantity) {
+        this.stock += quantity;
+    }
+
+    /**
+     * @return true if the product is currently on sale
+     */
+    public boolean isOnSale() {
+        return compareAtPrice != null && compareAtPrice.compareTo(price) > 0;
+    }
+
+    /**
+     * @return true if stock has fallen at or below the low-stock threshold
+     */
+    public boolean isLowStock() {
+        return stock <= lowStockThreshold;
+    }
+
+    /**
+     * Returns the primary image URL for use in list views.
+     * Returns null if no images have been uploaded yet.
+     */
+    public String getPrimaryImageUrl() {
+        return images.stream()
+                .filter(ProductImage::isPrimary)
+                .findFirst()
+                .map(ProductImage::getUrl)
+                .orElse(images.isEmpty() ? null : images.get(0).getUrl());
+    }
+}
