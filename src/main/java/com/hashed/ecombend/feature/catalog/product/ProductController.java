@@ -63,3 +63,43 @@ public class ProductController {
     @Operation(summary = "Get product by ID")
     public ApiResponse<ProductResponse> getById(@PathVariable UUID id) {
         return ApiResponse.ok("Product retrieved", productService.getById(id));
+    }
+
+    @PostMapping
+    @ResponseStatus(HttpStatus.CREATED)
+    @PreAuthorize("hasRole('ADMIN')")
+    @SecurityRequirement(name = "Bearer Authentication")
+    @Operation(summary = "Create a product [ADMIN]")
+    public ApiResponse<ProductResponse> create(@Valid @RequestBody ProductRequest request) {
+        return ApiResponse.ok("Product created", productService.create(request));
+    }
+
+    @PostMapping(value = "/{id}/images", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @PreAuthorize("hasRole('ADMIN')")
+    @SecurityRequirement(name = "Bearer Authentication")
+    @Operation(summary = "Upload product images (max 8) [ADMIN]")
+    public ApiResponse<List<ProductImage>> uploadImages(
+            @PathVariable UUID id,
+            @RequestParam("files") List<MultipartFile> files) {
+        return ApiResponse.ok("Images uploaded", productService.uploadImages(id, files));
+    }
+
+    @PutMapping("/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
+    @SecurityRequirement(name = "Bearer Authentication")
+    @Operation(summary = "Update a product [ADMIN]")
+    public ApiResponse<ProductResponse> update(
+            @PathVariable UUID id,
+            @Valid @RequestBody ProductRequest request) {
+        return ApiResponse.ok("Product updated", productService.update(id, request));
+    }
+
+    @DeleteMapping("/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
+    @SecurityRequirement(name = "Bearer Authentication")
+    @Operation(summary = "Soft-delete a product [ADMIN]")
+    public ApiResponse<Void> delete(@PathVariable UUID id) {
+        productService.delete(id);
+        return ApiResponse.ok("Product deleted");
+    }
+}
