@@ -143,3 +143,57 @@ public class ProductServiceImpl implements ProductService {
     public List<ProductImage> uploadImages(UUID productId, List<MultipartFile> files) {
         Product product = productRepository.findById(productId)
                 .orElseThrow(() -> new ResourceNotFoundException("Product", "id", productId));
+
+        int existing = imageRepository.countByProductId(productId);
+        if (existing + files.size() > MAX_IMAGES) {
+            throw new BusinessException(
+                    "A product can have at most " + MAX_IMAGES + " images. "
+                            + "Currently has " + existing + ".");
+        }
+
+        boolean hasPrimary = imageRepository.existsByProductIdAndPrimaryTrue(productId);
+
+        List<ProductImage> saved = files.stream().map(file -> {
+            String url = storageService.store(
+                    file, "products/" + productId);
+
+            ProductImage img = new ProductImage();
+            img.setProduct(product);
+            img.setUrl(url);
+            img.setAltText(product.getName());
+            img.setSortOrder(imageRepository.countByProductId(productId));
+
+            // First image uploaded becomes primary if none exists
+            if (!hasPrimary && files.indexOf(file) == 0) {
+                img.setPrimary(true);
+            }
+
+            return imageRepository.save(img);
+        }).toList();
+
+        log.info("Uploaded {} image(s) for product: {}", saved.size(), product.getName());
+        return saved;
+    }
+
+    private void validateCompareAtPrice(BigDecimal price, BigDecimal compareAtPrice) {
+        if (compareAtPrice != null && compareAtPrice.compareTo(price) <= 0) {
+            throw new BusinessException(
+                    "Compare-at price must be greater than the sale price");
+        }
+    }
+
+    private String generateUniqueSlug(String name, UUID excludeId) {
+        String base = SlugUtil.generate(name);
+        String candidate = base;
+        int suffix = 2;
+
+        while (true) {
+            final String slug = candidate;
+            boolean taken = productRepository.findBySlug(slug)
+                    .filter(p -> !p.getId().equals(excludeId))
+                    .isPresent();
+            if (!taken) return slug;
+            candidate = SlugUtil.withSuffix(base, suffix++);
+        }
+    }
+}
