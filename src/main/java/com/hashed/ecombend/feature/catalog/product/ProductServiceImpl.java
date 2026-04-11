@@ -88,3 +88,58 @@ public class ProductServiceImpl implements ProductService {
     }
 
     /**
+     * Updates a product. Regenerates slug only if the name changed.
+     * SKU changes are not allowed create a new product instead.
+     */
+    @Override
+    public ProductResponse update(UUID id, ProductRequest request) {
+        Product product = productRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Product", "id", id));
+
+        if (StringUtils.hasText(request.getName())
+                && !request.getName().equalsIgnoreCase(product.getName())) {
+            product.setName(request.getName());
+            product.setSlug(generateUniqueSlug(request.getName(), id));
+        }
+
+        if (request.getDescription() != null) product.setDescription(request.getDescription());
+        if (request.getPrice() != null) {
+            validateCompareAtPrice(request.getPrice(), request.getCompareAtPrice());
+            product.setPrice(request.getPrice());
+        }
+        if (request.getCompareAtPrice() != null) product.setCompareAtPrice(request.getCompareAtPrice());
+        product.setStock(request.getStock());
+        product.setLowStockThreshold(request.getLowStockThreshold());
+
+        if (request.getCategoryId() != null
+                && !request.getCategoryId().equals(product.getCategory().getId())) {
+            Category category = categoryRepository.findById(request.getCategoryId())
+                    .orElseThrow(() -> new ResourceNotFoundException(
+                            "Category", "id", request.getCategoryId()));
+            product.setCategory(category);
+        }
+
+        Product saved = productRepository.save(product);
+        log.info("Product updated: {}", saved.getName());
+        return ProductResponse.from(saved);
+    }
+
+    @Override
+    public void delete(UUID id) {
+        Product product = productRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Product", "id", id));
+        product.softDelete();
+        productRepository.save(product);
+        log.info("Product soft-deleted: {}", product.getName());
+    }
+
+    /**
+     * Uploads up to 8 images for a product. Files are stored via StorageService.
+     * The first uploaded image is set as primary if no primary exists yet.
+     *
+     * @throws BusinessException if the product already has 8 images
+     */
+    @Override
+    public List<ProductImage> uploadImages(UUID productId, List<MultipartFile> files) {
+        Product product = productRepository.findById(productId)
+                .orElseThrow(() -> new ResourceNotFoundException("Product", "id", productId));
