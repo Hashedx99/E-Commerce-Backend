@@ -98,3 +98,48 @@ public class OrderServiceImpl implements OrderService {
         for (ItemData data : itemsData) {
             Product product = data.product();
 
+            // Optimistic lock fires here if another transaction already saved this product
+            try {
+                product.decrementStock(data.quantity());
+                productRepository.save(product);
+            } catch (ObjectOptimisticLockingFailureException e) {
+                throw new BusinessException(
+                        "'" + product.getName()
+                                + "' stock changed due to a concurrent request. Please retry.");
+            }
+
+            // Snapshot into OrderItem
+            OrderItem item = new OrderItem();
+            item.setOrder(order);
+            item.setProduct(product);
+            item.setProductName(product.getName());
+            item.setProductSku(product.getSku());
+            item.setQuantity(data.quantity());
+            item.setUnitPrice(product.getPrice());
+            item.setTotalPrice(
+                    product.getPrice().multiply(BigDecimal.valueOf(data.quantity())));
+
+            orderItems.add(item);
+            subtotal = subtotal.add(item.getTotalPrice());
+        }
+
+        // Step 5: snapshot shipping address
+        if (request.getAddressId() != null) {
+            Address address = addressRepository
+                    .findByIdAndUserId(request.getAddressId(), user.getId())
+                    .orElseThrow(() -> new ResourceNotFoundException(
+                            "Address", "id", request.getAddressId()));
+            snapshotAddress(order, address);
+        }
+
+        // Step 6: calculate totals
+        // discount and shipping are stubs
+        order.setSubtotal(subtotal);
+        order.setDiscountAmount(BigDecimal.ZERO);
+        order.setShippingAmount(BigDecimal.ZERO);
+        order.setTaxAmount(BigDecimal.ZERO);
+        order.setTotal(subtotal);
+
+        // Step 7: save everything
+        Order saved = orderRepository.save(order);
+        orderItems.forEach(item -> item.setOrder(saved));
