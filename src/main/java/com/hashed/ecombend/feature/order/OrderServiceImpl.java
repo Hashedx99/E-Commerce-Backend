@@ -143,3 +143,98 @@ public class OrderServiceImpl implements OrderService {
         // Step 7: save everything
         Order saved = orderRepository.save(order);
         orderItems.forEach(item -> item.setOrder(saved));
+        itemRepository.saveAll(orderItems);
+        saved.setItems(orderItems);
+
+        log.info("Order placed by {} — {} item(s), total {}",
+                user.getEmail(), orderItems.size(), saved.getTotal());
+        return saved;
+    }
+
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<Order> getMyOrders() {
+        return orderRepository.findByUserIdOrderByCreatedAtDesc(
+                SecurityUtil.getCurrentUser().getId());
+    }
+
+
+    /**
+     * Returns a specific order.
+     * Customers can only see their own admins can see any.
+     */
+    @Override
+    @Transactional(readOnly = true)
+    public Order getOrder(UUID orderId) {
+        User user = SecurityUtil.getCurrentUser();
+
+        if (user.getRole() == UserRole.ADMIN) {
+            return orderRepository.findById(orderId)
+                    .orElseThrow(() -> new ResourceNotFoundException("Order", "id", orderId));
+        }
+
+        return orderRepository.findByIdAndUserId(orderId, user.getId())
+                .orElseThrow(() -> new ResourceNotFoundException("Order", "id", orderId));
+    }
+
+
+    @Override
+    @Transactional(readOnly = true)
+    public Page<Order> getAllOrders(Pageable pageable) {
+        return orderRepository.findAllByOrderByCreatedAtDesc(pageable);
+    }
+
+
+    /**
+     * Updates order status. Enforces valid transitions:
+     * PENDING    → CONFIRMED
+     * CONFIRMED  → SHIPPED
+     * SHIPPED    → DELIVERED
+     * Any        → CANCELLED
+     * DELIVERED  → REFUNDED
+     */
+    @Override
+    public Order updateStatus(UUID orderId, UpdateOrderStatusRequest request) {
+        Order order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new ResourceNotFoundException("Order", "id", orderId));
+
+        validateTransition(order.getStatus(), request.getStatus());
+        order.setStatus(request.getStatus());
+
+        Order saved = orderRepository.save(order);
+        log.info("Order {} status updated to {}", orderId, request.getStatus());
+        return saved;
+    }
+
+    private void snapshotAddress(Order order, Address address) {
+        order.setShippingName(address.getFullName());
+        order.setShippingLine1(address.getLine1());
+        order.setShippingLine2(address.getLine2());
+        order.setShippingCity(address.getCity());
+        order.setShippingState(address.getState());
+        order.setShippingPostalCode(address.getPostalCode());
+        order.setShippingCountry(address.getCountry());
+    }
+
+    /**
+     * Validates that the requested status transition is legal.
+     * Rejects nonsensical jumps.
+     */
+    private void validateTransition(OrderStatus current, OrderStatus next) {
+        boolean valid = switch (next) {
+            case CONFIRMED -> current == OrderStatus.PENDING;
+            case SHIPPED -> current == OrderStatus.CONFIRMED;
+            case DELIVERED -> current == OrderStatus.SHIPPED;
+            case CANCELLED -> current != OrderStatus.DELIVERED
+                    && current != OrderStatus.REFUNDED;
+            case REFUNDED -> current == OrderStatus.DELIVERED;
+            default -> false;
+        };
+
+        if (!valid) {
+            throw new BusinessException(
+                    "Cannot transition order from " + current + " to " + next);
+        }
+    }
+}
