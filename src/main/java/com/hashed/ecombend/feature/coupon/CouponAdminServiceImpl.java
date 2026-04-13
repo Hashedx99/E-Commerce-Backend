@@ -8,6 +8,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.UUID;
 
@@ -27,6 +28,8 @@ public class CouponAdminServiceImpl implements CouponAdminService {
 
     @Override
     public Coupon create(CouponRequest request) {
+        validateRequest(request);
+
         // Enforce code uniqueness
         couponRepository.findByCodeIgnoreCase(request.getCode()).ifPresent(c -> {
             throw new BusinessException(
@@ -53,5 +56,18 @@ public class CouponAdminServiceImpl implements CouponAdminService {
                 .orElseThrow(() -> new ResourceNotFoundException("Coupon", "id", id));
         couponRepository.delete(coupon);
         log.info("Coupon deleted: {}", coupon.getCode());
+    }
+
+    private void validateRequest(CouponRequest request) {
+        if (request.getMinOrderAmount() != null
+                && request.getMinOrderAmount().compareTo(BigDecimal.ZERO) < 0) {
+            throw new BusinessException("Minimum order amount cannot be negative");
+        }
+
+        if (request.getType() == CouponType.PERCENTAGE
+                && request.getValue() != null
+                && request.getValue().compareTo(new BigDecimal("100")) > 0) {
+            throw new BusinessException("Percentage coupon value cannot exceed 100");
+        }
     }
 }

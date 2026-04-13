@@ -21,6 +21,7 @@ public class CouponRequest {
     @DecimalMin(value = "0.01", message = "Value must be greater than zero")
     private BigDecimal value;
 
+    @DecimalMin(value = "0.00", message = "Minimum order amount cannot be negative")
     private BigDecimal minOrderAmount;
 
     @Min(value = 1, message = "Max uses must be at least 1")
