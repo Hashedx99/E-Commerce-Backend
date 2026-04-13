@@ -57,6 +57,7 @@ public class SecurityConfiguration {
                         // Product/category browsing is public
                         .requestMatchers(HttpMethod.GET, "/api/products/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/categories/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/files/**").permitAll()
                         // Everything else requires a valid JWT
                         .anyRequest().authenticated())
                 .addFilterBefore(jwtRequestFilter, UsernamePasswordAuthenticationFilter.class);
