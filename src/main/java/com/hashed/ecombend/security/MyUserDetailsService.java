@@ -3,6 +3,7 @@ package com.hashed.ecombend.security;
 import com.hashed.ecombend.feature.user.User;
 import com.hashed.ecombend.feature.user.UserRepository;
 import lombok.RequiredArgsConstructor;
+import org.jspecify.annotations.NonNull;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
@@ -28,9 +29,9 @@ public class MyUserDetailsService implements UserDetailsService {
      * @throws UsernameNotFoundException if no user exists with this email
      */
     @Override
-    public UserDetails loadUserByUsername(String email) throws UsernameNotFoundException {
-        User user = userRepository.findByEmail(email).orElseThrow(() -> new UsernameNotFoundException("No account " +
-                "found with email: " + email));
+    public UserDetails loadUserByUsername(@NonNull String email) throws UsernameNotFoundException {
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new UsernameNotFoundException("Invalid email or password"));
         return new MyUserDetails(user);
     }
 }
