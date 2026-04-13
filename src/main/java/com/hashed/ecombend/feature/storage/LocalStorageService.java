@@ -1,6 +1,7 @@
 package com.hashed.ecombend.feature.storage;
 
 import com.hashed.ecombend.common.exception.BusinessException;
+import com.hashed.ecombend.common.exception.StorageException;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Primary;
 import org.springframework.stereotype.Service;
@@ -50,7 +51,7 @@ public class LocalStorageService implements StorageService {
             }
             Files.write(dest, file.getBytes());
         } catch (IOException e) {
-            throw new RuntimeException("Failed to store file: " + e.getMessage(), e);
+            throw new StorageException("Failed to store uploaded file", e);
         }
 
         return baseUrl + "/" + folder + "/" + fileName;

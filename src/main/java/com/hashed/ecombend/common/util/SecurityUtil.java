@@ -3,6 +3,8 @@ package com.hashed.ecombend.common.util;
 import com.hashed.ecombend.feature.user.User;
 import com.hashed.ecombend.feature.user.UserRole;
 import com.hashed.ecombend.security.MyUserDetails;
+import org.springframework.security.authentication.AuthenticationCredentialsNotFoundException;
+import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 
 /**
@@ -21,11 +23,11 @@ public final class SecurityUtil {
      * @throws ClassCastException if called outside an authenticated request context
      */
     public static User getCurrentUser() {
-        return ((MyUserDetails) SecurityContextHolder
-                .getContext()
-                .getAuthentication()
-                .getPrincipal())
-                .getUser();
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (authentication == null || !(authentication.getPrincipal() instanceof MyUserDetails details)) {
+            throw new AuthenticationCredentialsNotFoundException("Authentication required");
+        }
+        return details.getUser();
     }
 
     /**

@@ -1,5 +1,6 @@
 package com.hashed.ecombend.mailing;
 
+import com.hashed.ecombend.common.exception.EmailDeliveryException;
 import jakarta.mail.internet.MimeMessage;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -56,7 +57,7 @@ public class DefaultEmailService implements EmailService {
             log.info("Email sent to: {}", email.getTo());
         } catch (Exception e) {
             log.error("Failed to send email to {}: {}", email.getTo(), e.getMessage());
-            throw new RuntimeException("Failed to send email", e);
+            throw new EmailDeliveryException("Failed to send email", e);
         }
     }
 }
