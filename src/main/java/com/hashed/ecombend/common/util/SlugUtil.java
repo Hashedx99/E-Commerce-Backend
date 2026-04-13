@@ -23,7 +23,7 @@ public final class SlugUtil {
         return input
                 .toLowerCase()
                 .replaceAll("[^a-z0-9\\s-]", "")
-//                .replaceAll("\\s+", "-")
+                .replaceAll("\\s+", "-")
                 .replaceAll("-+", "-")
                 .replaceAll("^-|-$", "");
     }
