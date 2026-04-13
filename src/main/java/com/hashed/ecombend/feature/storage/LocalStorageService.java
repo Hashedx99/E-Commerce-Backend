@@ -1,5 +1,6 @@
 package com.hashed.ecombend.feature.storage;
 
+import com.hashed.ecombend.common.exception.BusinessException;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Primary;
 import org.springframework.stereotype.Service;
@@ -73,13 +74,14 @@ public class LocalStorageService implements StorageService {
 
     private void validateFile(MultipartFile file) {
         if (file == null || file.isEmpty()) {
-            throw new RuntimeException("File must not be empty");
+            throw new BusinessException("File must not be empty");
         }
-        if (!ALLOWED_TYPES.contains(file.getContentType())) {
-            throw new RuntimeException("File type not allowed. Accepted: jpg, png, webp");
+        String contentType = file.getContentType();
+        if (contentType == null || !ALLOWED_TYPES.contains(contentType)) {
+            throw new BusinessException("File type not allowed. Accepted: jpg, png, webp");
         }
         if (file.getSize() > MAX_BYTES) {
-            throw new RuntimeException("File exceeds maximum allowed size of 5 MB");
+            throw new BusinessException("File exceeds maximum allowed size of 5 MB");
         }
     }
 
