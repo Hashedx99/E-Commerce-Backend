@@ -8,6 +8,8 @@ import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
+import org.springframework.security.config.annotation.web.configurers.HeadersConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -34,9 +36,9 @@ public class SecurityConfiguration {
     }
 
     @Bean
-    public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
-        http.csrf(csrf -> csrf.disable())
-                .headers(headers -> headers.frameOptions(frame -> frame.sameOrigin()))
+    public SecurityFilterChain filterChain(HttpSecurity http) {
+        http.csrf(AbstractHttpConfigurer::disable)
+                .headers(headers -> headers.frameOptions(HeadersConfigurer.FrameOptionsConfig::sameOrigin))
                 .exceptionHandling(ex -> ex.authenticationEntryPoint(authEntryPoint))
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
@@ -63,7 +65,7 @@ public class SecurityConfiguration {
     }
 
     @Bean
-    public AuthenticationManager authenticationManager(AuthenticationConfiguration config) throws Exception {
+    public AuthenticationManager authenticationManager(AuthenticationConfiguration config) {
         return config.getAuthenticationManager();
     }
 }
