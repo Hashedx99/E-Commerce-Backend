@@ -36,6 +36,20 @@ public class JwtRequestFilter extends OncePerRequestFilter {
     private final JWTUtils jwtUtils;
 
     @Override
+    protected boolean shouldNotFilter(HttpServletRequest request) {
+        String path = request.getServletPath();
+        return path.startsWith("/auth/")
+                || path.equals("/auth")
+                || path.startsWith("/h2-console/")
+                || path.equals("/swagger-ui.html")
+                || path.startsWith("/swagger-ui/")
+                || path.equals("/v3/api-docs")
+                || path.startsWith("/v3/api-docs/")
+                || path.equals("/v3/api-docs.yaml")
+                || path.startsWith("/webjars/");
+    }
+
+    @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response,
                                     FilterChain filterChain) throws ServletException, IOException {
         try {
