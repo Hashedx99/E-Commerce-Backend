@@ -3,7 +3,8 @@ package com.hashed.ecombend.feature.catalog.category;
 import com.hashed.ecombend.common.exception.BusinessException;
 import com.hashed.ecombend.common.exception.ResourceNotFoundException;
 import com.hashed.ecombend.common.util.SlugUtil;
-import com.hashed.ecombend.feature.catalog.category.dto.CategoryRequest;
+import com.hashed.ecombend.feature.catalog.category.dto.CategoryCreateRequest;
+import com.hashed.ecombend.feature.catalog.category.dto.CategoryUpdateRequest;
 import com.hashed.ecombend.feature.catalog.product.ProductRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -49,7 +50,7 @@ public class CategoryServiceImpl implements CategoryService {
      * @throws ResourceNotFoundException if parentId doesn't exist
      */
     @Override
-    public Category create(CategoryRequest request) {
+    public Category create(CategoryCreateRequest request) {
         Category category = new Category();
         category.setName(request.getName());
         category.setSlug(generateUniqueSlug(request.getName(), null));
@@ -77,7 +78,7 @@ public class CategoryServiceImpl implements CategoryService {
      * @throws ResourceNotFoundException if category not found
      */
     @Override
-    public Category update(UUID id, CategoryRequest request) {
+    public Category update(UUID id, CategoryUpdateRequest request) {
         Category category = getById(id);
 
         // Regenerate slug only if name actually changed

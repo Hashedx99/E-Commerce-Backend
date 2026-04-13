@@ -1,7 +1,8 @@
 package com.hashed.ecombend.feature.catalog.category;
 
 import com.hashed.ecombend.common.response.ApiResponse;
-import com.hashed.ecombend.feature.catalog.category.dto.CategoryRequest;
+import com.hashed.ecombend.feature.catalog.category.dto.CategoryCreateRequest;
+import com.hashed.ecombend.feature.catalog.category.dto.CategoryUpdateRequest;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -45,7 +46,7 @@ public class CategoryController {
     @PreAuthorize("hasRole('ADMIN')")
     @SecurityRequirement(name = "Bearer Authentication")
     @Operation(summary = "Create a new category [ADMIN]")
-    public ApiResponse<Category> create(@Valid @RequestBody CategoryRequest request) {
+    public ApiResponse<Category> create(@Valid @RequestBody CategoryCreateRequest request) {
         return ApiResponse.ok("Category created", categoryService.create(request));
     }
 
@@ -56,7 +57,7 @@ public class CategoryController {
     @Operation(summary = "Update a category [ADMIN]")
     public ApiResponse<Category> update(
             @PathVariable UUID id,
-            @Valid @RequestBody CategoryRequest request) {
+            @Valid @RequestBody CategoryUpdateRequest request) {
         return ApiResponse.ok("Category updated", categoryService.update(id, request));
     }
 

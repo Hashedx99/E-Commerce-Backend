@@ -5,7 +5,8 @@ import com.hashed.ecombend.common.exception.ResourceNotFoundException;
 import com.hashed.ecombend.feature.catalog.category.Category;
 import com.hashed.ecombend.feature.catalog.category.CategoryRepository;
 import com.hashed.ecombend.feature.catalog.category.CategoryServiceImpl;
-import com.hashed.ecombend.feature.catalog.category.dto.CategoryRequest;
+import com.hashed.ecombend.feature.catalog.category.dto.CategoryCreateRequest;
+import com.hashed.ecombend.feature.catalog.category.dto.CategoryUpdateRequest;
 import com.hashed.ecombend.feature.catalog.product.ProductRepository;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -38,7 +39,7 @@ class CategoryServiceImplTest {
     @Test
     @DisplayName("create: success — slug generated from name")
     void create_success_slugGenerated() {
-        CategoryRequest req = new CategoryRequest();
+        CategoryCreateRequest req = new CategoryCreateRequest();
         req.setName("Electronics");
         req.setDescription("Phones, laptops, gadgets");
 
@@ -56,7 +57,7 @@ class CategoryServiceImplTest {
     @Test
     @DisplayName("create: slug collision — appends numeric suffix")
     void create_slugCollision_appendsSuffix() {
-        CategoryRequest req = new CategoryRequest();
+        CategoryCreateRequest req = new CategoryCreateRequest();
         req.setName("Electronics");
 
         Category existing = new Category();
@@ -77,7 +78,7 @@ class CategoryServiceImplTest {
     @DisplayName("create: invalid parentId — throws ResourceNotFoundException")
     void create_invalidParentId_throwsResourceNotFoundException() {
         UUID badParentId = UUID.randomUUID();
-        CategoryRequest req = new CategoryRequest();
+        CategoryCreateRequest req = new CategoryCreateRequest();
         req.setName("Phones");
         req.setParentId(badParentId);
 
@@ -93,7 +94,7 @@ class CategoryServiceImplTest {
         UUID id = UUID.randomUUID();
         when(categoryRepository.findById(id)).thenReturn(Optional.empty());
 
-        assertThatThrownBy(() -> categoryService.update(id, new CategoryRequest())).isInstanceOf(ResourceNotFoundException.class).hasMessageContaining("Category");
+        assertThatThrownBy(() -> categoryService.update(id, new CategoryUpdateRequest())).isInstanceOf(ResourceNotFoundException.class).hasMessageContaining("Category");
     }
 
     @Test
@@ -105,7 +106,7 @@ class CategoryServiceImplTest {
         cat.setName("Electronics");
         cat.setSlug("electronics");
 
-        CategoryRequest req = new CategoryRequest();
+        CategoryUpdateRequest req = new CategoryUpdateRequest();
         req.setParentId(id); // same as the category's own id
 
         when(categoryRepository.findById(id)).thenReturn(Optional.of(cat));
@@ -113,6 +114,27 @@ class CategoryServiceImplTest {
         assertThatThrownBy(() -> categoryService.update(id, req))
                 .isInstanceOf(BusinessException.class)
                 .hasMessageContaining("own parent");
+    }
+
+    @Test
+    @DisplayName("update: partial request without name keeps existing name")
+    void update_partialRequestWithoutName_keepsExistingName() {
+        UUID id = UUID.randomUUID();
+        Category cat = new Category();
+        cat.setId(id);
+        cat.setName("Electronics");
+        cat.setSlug("electronics");
+
+        CategoryUpdateRequest req = new CategoryUpdateRequest();
+        req.setDescription("Updated description");
+
+        when(categoryRepository.findById(id)).thenReturn(Optional.of(cat));
+        when(categoryRepository.save(any(Category.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        Category result = categoryService.update(id, req);
+
+        assertThat(result.getName()).isEqualTo("Electronics");
+        assertThat(result.getDescription()).isEqualTo("Updated description");
     }
 
     @Test

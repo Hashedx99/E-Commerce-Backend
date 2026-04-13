@@ -1,6 +1,7 @@
 package com.hashed.ecombend.feature.catalog.category;
 
-import com.hashed.ecombend.feature.catalog.category.dto.CategoryRequest;
+import com.hashed.ecombend.feature.catalog.category.dto.CategoryCreateRequest;
+import com.hashed.ecombend.feature.catalog.category.dto.CategoryUpdateRequest;
 
 import java.util.List;
 import java.util.UUID;
@@ -20,12 +21,12 @@ public interface CategoryService {
     /**
      * creates a new category. Admin only.
      */
-    Category create(CategoryRequest request);
+    Category create(CategoryCreateRequest request);
 
     /**
      * updates an existing category. Admin only.
      */
-    Category update(UUID id, CategoryRequest request);
+    Category update(UUID id, CategoryUpdateRequest request);
 
     /**
      * soft deletes a category. Admin only.
