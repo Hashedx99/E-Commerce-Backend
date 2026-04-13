@@ -70,8 +70,9 @@ Ecombend is a Spring Boot 4 e-commerce REST API built with Java 17. It supports 
 
 ## Planning and Tracking
 
-- ERD Diagram: `[Add ERD link here]`
-- Jira Board: `[Add Jira board link here]`
+- [Postman Collection](https://www.postman.com/hashedx99-2376480/workspace/ecombend)
+- [ERD Diagram](https://app.eraser.io/workspace/BmuzYjPFrLYNEVRNYy9w?origin=share&diagram=pA0-s6cdvhvu7kVbxWVFv)
+- [Jira Board](https://hashed.atlassian.net/jira/software/projects/ECB/boards/1)
 
 ---
 
