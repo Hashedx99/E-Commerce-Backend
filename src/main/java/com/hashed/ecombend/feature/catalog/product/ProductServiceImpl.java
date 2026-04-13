@@ -6,8 +6,9 @@ import com.hashed.ecombend.common.exception.ResourceNotFoundException;
 import com.hashed.ecombend.common.util.SlugUtil;
 import com.hashed.ecombend.feature.catalog.category.Category;
 import com.hashed.ecombend.feature.catalog.category.CategoryRepository;
-import com.hashed.ecombend.feature.catalog.product.dto.ProductRequest;
+import com.hashed.ecombend.feature.catalog.product.dto.ProductCreateRequest;
 import com.hashed.ecombend.feature.catalog.product.dto.ProductResponse;
+import com.hashed.ecombend.feature.catalog.product.dto.ProductUpdateRequest;
 import com.hashed.ecombend.feature.storage.StorageService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -59,7 +60,7 @@ public class ProductServiceImpl implements ProductService {
      * Generates a unique slug from the name via SlugUtil.
      */
     @Override
-    public ProductResponse create(ProductRequest request) {
+    public ProductResponse create(ProductCreateRequest request) {
         Category category = categoryRepository.findById(request.getCategoryId())
                 .orElseThrow(() -> new ResourceNotFoundException(
                         "Category", "id", request.getCategoryId()));
@@ -92,7 +93,7 @@ public class ProductServiceImpl implements ProductService {
      * SKU changes are not allowed create a new product instead.
      */
     @Override
-    public ProductResponse update(UUID id, ProductRequest request) {
+    public ProductResponse update(UUID id, ProductUpdateRequest request) {
         Product product = productRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Product", "id", id));
 
@@ -103,13 +104,24 @@ public class ProductServiceImpl implements ProductService {
         }
 
         if (request.getDescription() != null) product.setDescription(request.getDescription());
+        BigDecimal nextPrice = request.getPrice() != null ? request.getPrice() : product.getPrice();
+        BigDecimal nextCompareAtPrice = request.getCompareAtPrice() != null
+                ? request.getCompareAtPrice()
+                : product.getCompareAtPrice();
+        validateCompareAtPrice(nextPrice, nextCompareAtPrice);
+
         if (request.getPrice() != null) {
-            validateCompareAtPrice(request.getPrice(), request.getCompareAtPrice());
             product.setPrice(request.getPrice());
         }
-        if (request.getCompareAtPrice() != null) product.setCompareAtPrice(request.getCompareAtPrice());
-        product.setStock(request.getStock());
-        product.setLowStockThreshold(request.getLowStockThreshold());
+        if (request.getCompareAtPrice() != null) {
+            product.setCompareAtPrice(request.getCompareAtPrice());
+        }
+        if (request.getStock() != null) {
+            product.setStock(request.getStock());
+        }
+        if (request.getLowStockThreshold() != null) {
+            product.setLowStockThreshold(request.getLowStockThreshold());
+        }
 
         if (request.getCategoryId() != null
                 && !request.getCategoryId().equals(product.getCategory().getId())) {

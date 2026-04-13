@@ -1,8 +1,9 @@
 package com.hashed.ecombend.feature.catalog.product;
 
 import com.hashed.ecombend.common.response.ApiResponse;
-import com.hashed.ecombend.feature.catalog.product.dto.ProductRequest;
+import com.hashed.ecombend.feature.catalog.product.dto.ProductCreateRequest;
 import com.hashed.ecombend.feature.catalog.product.dto.ProductResponse;
+import com.hashed.ecombend.feature.catalog.product.dto.ProductUpdateRequest;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -70,7 +71,7 @@ public class ProductController {
     @PreAuthorize("hasRole('ADMIN')")
     @SecurityRequirement(name = "Bearer Authentication")
     @Operation(summary = "Create a product [ADMIN]")
-    public ApiResponse<ProductResponse> create(@Valid @RequestBody ProductRequest request) {
+    public ApiResponse<ProductResponse> create(@Valid @RequestBody ProductCreateRequest request) {
         return ApiResponse.ok("Product created", productService.create(request));
     }
 
@@ -90,7 +91,7 @@ public class ProductController {
     @Operation(summary = "Update a product [ADMIN]")
     public ApiResponse<ProductResponse> update(
             @PathVariable UUID id,
-            @Valid @RequestBody ProductRequest request) {
+            @Valid @RequestBody ProductUpdateRequest request) {
         return ApiResponse.ok("Product updated", productService.update(id, request));
     }
 

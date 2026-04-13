@@ -1,7 +1,8 @@
 package com.hashed.ecombend.feature.catalog.product;
 
-import com.hashed.ecombend.feature.catalog.product.dto.ProductRequest;
+import com.hashed.ecombend.feature.catalog.product.dto.ProductCreateRequest;
 import com.hashed.ecombend.feature.catalog.product.dto.ProductResponse;
+import com.hashed.ecombend.feature.catalog.product.dto.ProductUpdateRequest;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.web.multipart.MultipartFile;
@@ -26,12 +27,12 @@ public interface ProductService {
     /**
      * creates a product. Admin only.
      */
-    ProductResponse create(ProductRequest request);
+    ProductResponse create(ProductCreateRequest request);
 
     /**
      * updates a product. Admin only.
      */
-    ProductResponse update(UUID id, ProductRequest request);
+    ProductResponse update(UUID id, ProductUpdateRequest request);
 
     /**
      * soft-deletes a product. Admin only.

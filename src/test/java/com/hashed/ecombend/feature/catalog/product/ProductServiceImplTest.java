@@ -5,8 +5,9 @@ import com.hashed.ecombend.common.exception.DuplicateResourceException;
 import com.hashed.ecombend.common.exception.ResourceNotFoundException;
 import com.hashed.ecombend.feature.catalog.category.Category;
 import com.hashed.ecombend.feature.catalog.category.CategoryRepository;
-import com.hashed.ecombend.feature.catalog.product.dto.ProductRequest;
+import com.hashed.ecombend.feature.catalog.product.dto.ProductCreateRequest;
 import com.hashed.ecombend.feature.catalog.product.dto.ProductResponse;
+import com.hashed.ecombend.feature.catalog.product.dto.ProductUpdateRequest;
 import com.hashed.ecombend.feature.storage.StorageService;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -44,15 +45,12 @@ class ProductServiceImplTest {
     @DisplayName("create: success — saves product with generated slug")
     void create_success() {
         Category category = buildCategory();
-        ProductRequest req = buildRequest("Apple Watch Series 9", "ELEC-AW-001", new BigDecimal("399.99"), null);
+        ProductCreateRequest req = buildCreateRequest("Apple Watch Series 9", "ELEC-AW-001", new BigDecimal("399.99"), null);
 
         when(categoryRepository.findById(req.getCategoryId())).thenReturn(Optional.of(category));
         when(productRepository.existsBySku("ELEC-AW-001")).thenReturn(false);
         when(productRepository.findBySlug(any())).thenReturn(Optional.empty());
-        when(productRepository.save(any(Product.class))).thenAnswer(inv -> {
-            Product p = inv.getArgument(0);
-            return p;
-        });
+        when(productRepository.save(any(Product.class))).thenAnswer(inv -> inv.<Product>getArgument(0));
 
         ProductResponse result = productService.create(req);
 
@@ -65,7 +63,7 @@ class ProductServiceImplTest {
     @Test
     @DisplayName("create: category not found — throws ResourceNotFoundException")
     void create_categoryNotFound_throwsException() {
-        ProductRequest req = buildRequest("Watch", "SKU-001", new BigDecimal("99.99"), null);
+        ProductCreateRequest req = buildCreateRequest("Watch", "SKU-001", new BigDecimal("99.99"), null);
         when(categoryRepository.findById(req.getCategoryId())).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> productService.create(req)).isInstanceOf(ResourceNotFoundException.class).hasMessageContaining("Category");
@@ -75,7 +73,7 @@ class ProductServiceImplTest {
     @DisplayName("create: duplicate SKU — throws DuplicateResourceException")
     void create_duplicateSku_throwsException() {
         Category category = buildCategory();
-        ProductRequest req = buildRequest("Watch", "ELEC-AW-001", new BigDecimal("99.99"), null);
+        ProductCreateRequest req = buildCreateRequest("Watch", "ELEC-AW-001", new BigDecimal("99.99"), null);
 
         when(categoryRepository.findById(req.getCategoryId())).thenReturn(Optional.of(category));
         when(productRepository.existsBySku("ELEC-AW-001")).thenReturn(true);
@@ -87,7 +85,7 @@ class ProductServiceImplTest {
     @DisplayName("create: compareAtPrice <= price — throws BusinessException")
     void create_invalidCompareAtPrice_throwsException() {
         Category category = buildCategory();
-        ProductRequest req = buildRequest("Watch", "SKU-002", new BigDecimal("99.99"), new BigDecimal("50.00")); //
+        ProductCreateRequest req = buildCreateRequest("Watch", "SKU-002", new BigDecimal("99.99"), new BigDecimal("50.00")); //
         // compareAt < price — invalid
 
         when(categoryRepository.findById(req.getCategoryId())).thenReturn(Optional.of(category));
@@ -137,6 +135,34 @@ class ProductServiceImplTest {
         assertThatThrownBy(() -> productService.uploadImages(id, files)).isInstanceOf(BusinessException.class).hasMessageContaining("8 images");
     }
 
+    @Test
+    @DisplayName("update: omitting stock fields does not overwrite existing stock values")
+    void update_omittingStockFields_preservesExistingValues() {
+        UUID id = UUID.randomUUID();
+        Category existingCategory = buildCategory();
+        Product product = new Product();
+        product.setId(id);
+        product.setName("Old Name");
+        product.setSlug("old-name");
+        product.setSku("SKU-100");
+        product.setPrice(new BigDecimal("20.00"));
+        product.setStock(15);
+        product.setLowStockThreshold(3);
+        product.setCategory(existingCategory);
+
+        ProductUpdateRequest req = new ProductUpdateRequest();
+        req.setDescription("Updated description");
+
+        when(productRepository.findById(id)).thenReturn(Optional.of(product));
+        when(productRepository.save(any(Product.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        ProductResponse result = productService.update(id, req);
+
+        assertThat(result.getStock()).isEqualTo(15);
+        assertThat(product.getLowStockThreshold()).isEqualTo(3);
+        assertThat(product.getDescription()).isEqualTo("Updated description");
+    }
+
     private Category buildCategory() {
         Category c = new Category();
         c.setName("Electronics");
@@ -151,8 +177,8 @@ class ProductServiceImplTest {
         return c;
     }
 
-    private ProductRequest buildRequest(String name, String sku, BigDecimal price, BigDecimal compareAtPrice) {
-        ProductRequest req = new ProductRequest();
+    private ProductCreateRequest buildCreateRequest(String name, String sku, BigDecimal price, BigDecimal compareAtPrice) {
+        ProductCreateRequest req = new ProductCreateRequest();
         req.setName(name);
         req.setSku(sku);
         req.setPrice(price);
