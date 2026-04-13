@@ -60,6 +60,7 @@ class CategoryServiceImplTest {
         req.setName("Electronics");
 
         Category existing = new Category();
+        existing.setId(UUID.randomUUID());
         existing.setSlug("electronics");
 
         // First check "electronics" → taken, second check "electronics-2" → free
@@ -100,6 +101,7 @@ class CategoryServiceImplTest {
     void update_selfReferentialParent_throwsBusinessException() {
         UUID id = UUID.randomUUID();
         Category cat = new Category();
+        cat.setId(id);
         cat.setName("Electronics");
         cat.setSlug("electronics");
 
@@ -108,11 +110,9 @@ class CategoryServiceImplTest {
 
         when(categoryRepository.findById(id)).thenReturn(Optional.of(cat));
 
-        assertThatThrownBy(() -> {
-            if (req.getParentId().equals(id)) {
-                throw new BusinessException("A category cannot be its own parent");
-            }
-        }).isInstanceOf(BusinessException.class).hasMessageContaining("own parent");
+        assertThatThrownBy(() -> categoryService.update(id, req))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("own parent");
     }
 
     @Test
