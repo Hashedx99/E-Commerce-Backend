@@ -9,6 +9,7 @@ import com.hashed.ecombend.feature.catalog.product.ProductRepository;
 import com.hashed.ecombend.feature.order.dto.PlaceOrderRequest;
 import com.hashed.ecombend.feature.order.dto.UpdateOrderStatusRequest;
 import com.hashed.ecombend.feature.user.User;
+import com.hashed.ecombend.feature.user.address.Address;
 import com.hashed.ecombend.feature.user.address.AddressRepository;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -68,15 +69,19 @@ class OrderServiceImplTest {
     @DisplayName("placeOrder: success — decrements stock, builds OrderItems, calculates total")
     void placeOrder_success() {
         Product product = buildProduct("Apple Watch", "ELEC-AW-001", new BigDecimal("399.99"), 10);
+        Address address = buildAddress();
 
         PlaceOrderRequest req = new PlaceOrderRequest();
         PlaceOrderRequest.OrderItemRequest itemReq = new PlaceOrderRequest.OrderItemRequest();
         itemReq.setProductId(product.getId());
         itemReq.setQuantity(2);
         req.setItems(List.of(itemReq));
+        req.setAddressId(address.getId());
 
         when(productRepository.findById(product.getId())).thenReturn(Optional.of(product));
         when(productRepository.save(any(Product.class))).thenReturn(product);
+        when(addressRepository.findByIdAndUserId(address.getId(), currentUser.getId()))
+                .thenReturn(Optional.of(address));
 
         Order savedOrder = new Order();
         savedOrder.setStatus(OrderStatus.PENDING);
@@ -130,6 +135,21 @@ class OrderServiceImplTest {
         when(productRepository.findById(missingId)).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> orderService.placeOrder(req)).isInstanceOf(ResourceNotFoundException.class).hasMessageContaining("Product");
+    }
+
+    @Test
+    @DisplayName("placeOrder: missing addressId — throws BusinessException")
+    void placeOrder_missingAddressId_throwsException() {
+        Product product = buildProduct("Watch", "SKU-001", new BigDecimal("99.99"), 10);
+        PlaceOrderRequest req = buildRequest(product.getId(), 1);
+        req.setAddressId(null);
+
+        when(productRepository.findById(product.getId())).thenReturn(Optional.of(product));
+        when(productRepository.save(any(Product.class))).thenReturn(product);
+
+        assertThatThrownBy(() -> orderService.placeOrder(req))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("Address ID is required");
     }
 
     @Test
@@ -202,12 +222,25 @@ class OrderServiceImplTest {
     }
 
     private PlaceOrderRequest buildRequest(UUID productId, int quantity) {
+        UUID addressId = UUID.randomUUID();
         PlaceOrderRequest req = new PlaceOrderRequest();
         PlaceOrderRequest.OrderItemRequest item = new PlaceOrderRequest.OrderItemRequest();
         item.setProductId(productId);
         item.setQuantity(quantity);
         req.setItems(List.of(item));
+        req.setAddressId(addressId);
         return req;
+    }
+
+    private Address buildAddress() {
+        Address address = new Address();
+        setId(address, UUID.randomUUID());
+        address.setFullName("Alice Customer");
+        address.setLine1("123 Main St");
+        address.setCity("Austin");
+        address.setPostalCode("78701");
+        address.setCountry("US");
+        return address;
     }
 
     /**

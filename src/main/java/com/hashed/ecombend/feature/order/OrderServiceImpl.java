@@ -48,7 +48,7 @@ public class OrderServiceImpl implements OrderService {
      * 2. Check stock >= requested quantity for each item.
      * 3. Decrement stock (triggers @Version optimistic lock check on save).
      * 4. Snapshot product name, sku, and price into each OrderItem.
-     * 5. Snapshot shipping address if addressId provided.
+     * 5. Snapshot shipping address (addressId is required).
      * 6. Calculate totals (subtotal, discount stub, shipping stub, tax stub).
      * 7. Save Order + items atomically.
      *
@@ -123,14 +123,15 @@ public class OrderServiceImpl implements OrderService {
             subtotal = subtotal.add(item.getTotalPrice());
         }
 
-        // Step 5: snapshot shipping address
-        if (request.getAddressId() != null) {
-            Address address = addressRepository
-                    .findByIdAndUserId(request.getAddressId(), user.getId())
-                    .orElseThrow(() -> new ResourceNotFoundException(
-                            "Address", "id", request.getAddressId()));
-            snapshotAddress(order, address);
+        // Step 5: snapshot required shipping address
+        if (request.getAddressId() == null) {
+            throw new BusinessException("Address ID is required");
         }
+        Address address = addressRepository
+                .findByIdAndUserId(request.getAddressId(), user.getId())
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "Address", "id", request.getAddressId()));
+        snapshotAddress(order, address);
 
         // Step 6: calculate totals
         // discount and shipping are stubs

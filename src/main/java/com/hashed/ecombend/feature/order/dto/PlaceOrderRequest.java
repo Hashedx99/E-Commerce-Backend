@@ -18,6 +18,7 @@ public class PlaceOrderRequest {
     /**
      * Address ID from the user's saved addresses.
      */
+    @NotNull(message = "Address ID is required")
     private UUID addressId;
 
     /**
