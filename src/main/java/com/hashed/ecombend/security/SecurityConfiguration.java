@@ -35,15 +35,29 @@ public class SecurityConfiguration {
 
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
-        http.csrf(csrf -> csrf.disable()).exceptionHandling(ex -> ex.authenticationEntryPoint(authEntryPoint)).sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS)).authorizeHttpRequests(auth -> auth
-                // Public — no JWT required
-                .requestMatchers("/auth/**").permitAll().requestMatchers("/h2-console/**").permitAll().requestMatchers("/swagger-ui/**", "/v3/api-docs/**").permitAll()
-                // Product/category browsing is public
-                .requestMatchers(HttpMethod.GET, "/api/products/**").permitAll().requestMatchers(HttpMethod.GET,
-                        "/api/categories/**").permitAll()
-                // Everything else requires a valid JWT
-                .anyRequest().authenticated()).addFilterBefore(jwtRequestFilter,
-                UsernamePasswordAuthenticationFilter.class);
+        http.csrf(csrf -> csrf.disable())
+                .headers(headers -> headers.frameOptions(frame -> frame.sameOrigin()))
+                .exceptionHandling(ex -> ex.authenticationEntryPoint(authEntryPoint))
+                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                .authorizeHttpRequests(auth -> auth
+                        // Public auth and local tooling
+                        .requestMatchers("/auth/**").permitAll()
+                        .requestMatchers("/h2-console/**").permitAll()
+                        // Swagger/OpenAPI endpoints
+                        .requestMatchers(
+                                "/swagger-ui.html",
+                                "/swagger-ui/**",
+                                "/v3/api-docs",
+                                "/v3/api-docs/**",
+                                "/v3/api-docs.yaml",
+                                "/webjars/**"
+                        ).permitAll()
+                        // Product/category browsing is public
+                        .requestMatchers(HttpMethod.GET, "/api/products/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/categories/**").permitAll()
+                        // Everything else requires a valid JWT
+                        .anyRequest().authenticated())
+                .addFilterBefore(jwtRequestFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
     }
