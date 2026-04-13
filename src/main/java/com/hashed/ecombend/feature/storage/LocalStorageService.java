@@ -22,7 +22,7 @@ import java.util.UUID;
  * <p>
  */
 @Service
-@Primary
+//@Primary
 public class LocalStorageService implements StorageService {
 
     private static final Set<String> ALLOWED_TYPES = Set.of(
