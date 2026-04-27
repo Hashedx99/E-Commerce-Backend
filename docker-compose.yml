@@ -1,0 +1,60 @@
+version: "3.7"
+name: ecombend
+services:
+  ecombend:
+    build: .
+    restart: always
+    ports:
+      - 8080:8080
+    depends_on:
+      - postgres_db
+    links:
+      - postgres_db:database
+    networks:
+      - postgres
+    environment:
+      API_CLOUDNAME: ${API_CLOUDNAME}
+      API_KEY: ${API_KEY}
+      API_SECRET: ${API_SECRET}
+      CLOUDINARY_KEY: ${CLOUDINARY_KEY}
+      JWT_SECRET_KEY: ${JWT_SECRET_KEY}
+      MY_EMAIL: ${MY_EMAIL}
+      DB_URL: ${DB_URL}
+      DB_USERNAME: ${DB_USERNAME}
+      DB_PASSWORD: ${DB_PASSWORD}
+      APP_BASE_URL: ${APP_BASE_URL}
+
+  postgres_db:
+    image: "postgres:11.4"
+    restart: always
+    ports:
+      - 5432:5432
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+    volumes:
+      - postgres:/data/postgres
+    networks:
+      - postgres
+
+  pgadmin:
+    container_name: ecombend_pgadmin_container
+    image: dpage/pgadmin4
+    environment:
+      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_DEFAULT_EMAIL:-pgadmin4@pgadmin.org}
+      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_DEFAULT_PASSWORD:-admin}
+    volumes:
+      - pgadmin:/root/.pgadmin
+    ports:
+      - "${PGADMIN_PORT:-5050}:80"
+    networks:
+      - postgres
+    restart: unless-stopped
+
+networks:
+  postgres:
+    driver: bridge
+
+volumes:
+  postgres:
+  pgadmin:
